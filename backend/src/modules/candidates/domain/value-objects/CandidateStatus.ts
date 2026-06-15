@@ -1,0 +1,8 @@
+export enum CandidateStatus {
+  APPLIED = "APPLIED",
+  SCREENING = "SCREENING",
+  INTERVIEW = "INTERVIEW",
+  OFFERED = "OFFERED",
+  REJECTED = "REJECTED",
+  HIRED = "HIRED",
+}
