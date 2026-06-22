@@ -68,6 +68,11 @@ export class MongoCandidateRepository implements ICandidateRepository {
     return doc ? this.toEntity(doc) : null;
   }
 
+  async findByEmailAndJobId(email: string, jobId: string): Promise<Candidate | null> {
+    const doc = await CandidateModel.findOne({ email, jobId });
+    return doc ? this.toEntity(doc) : null;
+  }
+
   async update(id: string, data: Partial<any>): Promise<Candidate | null> {
     const doc = await CandidateModel.findByIdAndUpdate(id, data, { new: true });
     return doc ? this.toEntity(doc) : null;

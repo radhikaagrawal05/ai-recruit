@@ -20,6 +20,11 @@ export default function JobDetail() {
   const [file, setFile] = useState<File | null>(null);
   const [adding, setAdding] = useState(false);
 
+  // Bulk upload
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [uploadingBulk, setUploadingBulk] = useState(false);
+
   // Edit modal
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", department: "", description: "", requiredSkills: "", experienceLevel: "", location: "" });
@@ -76,6 +81,27 @@ export default function JobDetail() {
       toast.error("Failed to add candidate");
     }
     finally { setAdding(false); }
+  };
+
+  const handleBulkUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !bulkFile) return;
+    setUploadingBulk(true);
+    try {
+      const res = await jobService.uploadBulkCandidates(id, bulkFile);
+      toast.success(`Bulk upload complete! Added: ${res.data.added}, Updated: ${res.data.updated}`);
+      
+      // Refresh candidates
+      const candRes = await candidateService.getAll({ jobId: id });
+      if (candRes.data) setCandidates(candRes.data);
+      
+      setShowBulkUpload(false);
+      setBulkFile(null);
+    } catch {
+      toast.error("Failed to upload bulk candidates");
+    } finally {
+      setUploadingBulk(false);
+    }
   };
 
   const handleEvaluate = async (candidateId: string) => {
@@ -239,9 +265,14 @@ export default function JobDetail() {
           <span className="text-[12px] bg-secondary border border-border px-2 py-0.5 rounded text-muted-foreground">{candidates.length}</span>
         </div>
         {(user?.role === "HR" || user?.role === "RECRUITER") && (
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-3 py-1.5 bg-foreground text-background rounded-lg text-[12px] font-medium hover:opacity-90">
-            <Plus size={12} /> Add candidate
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowBulkUpload(true)} className="flex items-center gap-2 px-3 py-1.5 bg-secondary border border-border text-foreground rounded-lg text-[12px] font-medium hover:border-muted-foreground/30">
+              <Upload size={12} /> Bulk upload
+            </button>
+            <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-3 py-1.5 bg-foreground text-background rounded-lg text-[12px] font-medium hover:opacity-90">
+              <Plus size={12} /> Add candidate
+            </button>
+          </div>
         )}
       </div>
 
@@ -311,6 +342,34 @@ export default function JobDetail() {
               </div>
               <button type="submit" disabled={adding} className="bg-foreground text-background rounded-lg py-2.5 font-medium text-[13px] hover:opacity-90 disabled:opacity-50 mt-1">
                 {adding ? "Adding..." : "Add candidate"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Upload Modal */}
+      {showBulkUpload && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 animate-modal-in" onClick={() => setShowBulkUpload(false)}>
+          <div className="bg-background border border-border rounded-xl w-full max-w-md p-6 animate-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-[16px] font-medium">Bulk upload candidates</h2>
+              <button onClick={() => setShowBulkUpload(false)} className="text-muted-foreground hover:text-foreground"><X size={16} /></button>
+            </div>
+            <p className="text-[12px] text-muted-foreground mb-4">
+              Upload an Excel (.xlsx) or CSV file extracted from your Google Form. 
+              Required columns: <strong>Name, Email</strong>. Optional: <strong>Phone, Resume</strong> (Google Drive link).
+            </p>
+            <form onSubmit={handleBulkUpload} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center justify-center gap-2 px-3 py-6 bg-secondary border border-dashed border-border rounded-lg cursor-pointer hover:border-muted-foreground/40 transition-colors">
+                  <Upload size={18} className="text-muted-foreground" />
+                  <span className="text-[13px] font-medium text-muted-foreground">{bulkFile ? bulkFile.name : "Select Excel/CSV file"}</span>
+                  <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => setBulkFile(e.target.files?.[0] || null)} className="hidden" />
+                </label>
+              </div>
+              <button type="submit" disabled={uploadingBulk || !bulkFile} className="bg-foreground text-background rounded-lg py-2.5 font-medium text-[13px] hover:opacity-90 disabled:opacity-50 mt-1">
+                {uploadingBulk ? "Uploading & Processing..." : "Upload Candidates"}
               </button>
             </form>
           </div>

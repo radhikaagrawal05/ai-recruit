@@ -38,4 +38,15 @@ export const jobService = {
     const res = await api.delete<ApiResponse<void>>(`/jobs/${id}`);
     return res.data;
   },
+
+  uploadBulkCandidates: async (id: string, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await api.post<ApiResponse<{ total: number; added: number; updated: number }>>(
+      `/jobs/${id}/bulk-candidates`,
+      formData,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    );
+    return res.data;
+  },
 };

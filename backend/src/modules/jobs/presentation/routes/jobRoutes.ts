@@ -2,15 +2,37 @@ import { Router, Response } from "express";
 import { authenticate, AuthRequest } from "../../../../shared/middleware/authenticate";
 import { authorize } from "../../../../shared/middleware/authorize";
 import { MongoJobRepository } from "../../infrastructure/repositories/MongoJobRepository";
+import { MongoCandidateRepository } from "../../../candidates/infrastructure/repositories/MongoCandidateRepository";
 import { CreateJob } from "../../application/use-cases/CreateJob";
 import { GetJobs } from "../../application/use-cases/GetJobs";
 import { GetJobById } from "../../application/use-cases/GetJobById";
 import { UpdateJob } from "../../application/use-cases/UpdateJob";
 import { DeleteJob } from "../../application/use-cases/DeleteJob";
+import { BulkAddCandidates } from "../../../candidates/application/use-cases/BulkAddCandidates";
 import { createJobSchema, updateJobSchema } from "../../application/validators/jobValidators";
+import { uploadExcel } from "../../../../shared/middleware/uploadMiddleware";
+import { fileStorage } from "../../../../infrastructure/storage";
 
 const router = Router();
 const repo = new MongoJobRepository();
+const candidateRepo = new MongoCandidateRepository();
+
+// POST /api/jobs/:id/bulk-candidates — HR/RECRUITER only
+router.post("/:id/bulk-candidates", authenticate, authorize("HR", "RECRUITER"), uploadExcel, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      res.status(400).json({ success: false, message: "No file uploaded" });
+      return;
+    }
+
+    const bulkAdd = new BulkAddCandidates(candidateRepo, fileStorage);
+    const result = await bulkAdd.execute(req.file.buffer, req.params.id as string);
+
+    res.status(200).json({ success: true, data: result });
+  } catch (err: any) {
+    res.status(err.statusCode || 400).json({ success: false, message: err.message });
+  }
+});
 
 // POST /api/jobs — HR only
 router.post("/", authenticate, authorize("HR"), async (req: AuthRequest, res: Response) => {

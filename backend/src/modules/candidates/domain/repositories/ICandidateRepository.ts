@@ -6,6 +6,7 @@ export interface ICandidateRepository {
   findById(id: string): Promise<Candidate | null>;
   findByJobId(jobId: string): Promise<Candidate[]>;
   findByEmail(email: string): Promise<Candidate | null>;
+  findByEmailAndJobId(email: string, jobId: string): Promise<Candidate | null>;
   update(id: string, data: Partial<any>): Promise<Candidate | null>;
   delete(id: string): Promise<void>;
   count(): Promise<number>;

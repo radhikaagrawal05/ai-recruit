@@ -5,6 +5,7 @@ import { RoundStatus } from "../../domain/value-objects/RoundStatus";
 import { NotFoundError } from "../../../../shared/errors/AppError";
 import { geminiService } from "../../../../infrastructure/ai/GeminiService";
 import { MongoJobRepository } from "../../../jobs/infrastructure/repositories/MongoJobRepository";
+import { emailService } from "../../../../infrastructure/email/EmailService";
 
 export interface CreateInterviewRoundDTO {
   candidateId: string;
@@ -71,6 +72,18 @@ export class CreateInterviewRound {
       suggestedQuestions,
     });
 
-    return this.interviewRepository.save(round);
+    const savedRound = await this.interviewRepository.save(round);
+
+    if (dto.scheduledAt && candidate.email) {
+      await emailService.sendInterviewInvite(
+        candidate.email,
+        candidate.name,
+        job.title,
+        roundNumber,
+        new Date(dto.scheduledAt)
+      );
+    }
+
+    return savedRound;
   }
 }

@@ -2,6 +2,8 @@ import { ICandidateRepository } from "../../domain/repositories/ICandidateReposi
 import { Candidate } from "../../domain/entities/Candidate";
 import { CandidateStatus } from "../../domain/value-objects/CandidateStatus";
 import { IFileStorage } from "../../../../infrastructure/storage/IFileStorage";
+import { ParseResume } from "../../../resume/application/use-cases/ParseResume";
+import { logger } from "../../../../infrastructure/logger";
 
 export interface AddCandidateDTO {
   name: string;
@@ -21,6 +23,7 @@ export class AddCandidate {
 
   async execute(dto: AddCandidateDTO): Promise<Candidate> {
     let resumeUrl = "";
+    let resumeText = "";
 
     // Upload resume if provided
     if (dto.resumeBuffer && dto.resumeOriginalName) {
@@ -31,6 +34,15 @@ export class AddCandidate {
         key,
         dto.resumeMimetype || "application/pdf"
       );
+
+      // Auto-parse resume text for AI evaluation
+      try {
+        const parser = new ParseResume();
+        resumeText = await parser.execute(dto.resumeBuffer, dto.resumeMimetype || "application/pdf");
+        logger.info(`Resume parsed successfully: ${resumeText.length} chars extracted`);
+      } catch (err: any) {
+        logger.warn(`Resume auto-parse failed: ${err.message}`);
+      }
     }
 
     const candidate = new Candidate({
@@ -39,6 +51,7 @@ export class AddCandidate {
       phone: dto.phone,
       jobId: dto.jobId,
       resumeUrl,
+      resumeText,
       status: CandidateStatus.APPLIED,
     });
 

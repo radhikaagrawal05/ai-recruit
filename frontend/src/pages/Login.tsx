@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { authService } from "../services/authService";
+import { ThemeToggle } from "../components/ThemeToggle";
 import toast from "react-hot-toast";
 
 type View = "login" | "register" | "verify";
@@ -87,7 +88,10 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="relative min-h-screen flex items-center justify-center bg-background">
+      <div className="absolute top-4 right-4">
+        <ThemeToggle />
+      </div>
       <div className="w-full max-w-[380px] px-8 animate-fade-in">
         <div className="text-[11px] tracking-[0.08em] text-muted-foreground mb-6">RECRU·AI</div>
 

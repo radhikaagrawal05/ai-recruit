@@ -12,6 +12,8 @@ import {
   X,
 } from "lucide-react";
 
+import { ThemeToggle } from "../components/ThemeToggle";
+
 const navItems = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["HR", "RECRUITER", "INTERVIEWER"] },
   { to: "/jobs", label: "Jobs", icon: Briefcase, roles: ["HR", "RECRUITER", "INTERVIEWER"] },
@@ -62,12 +64,15 @@ export default function AppLayout() {
           <span className="text-[11px] tracking-[0.08em] text-muted-foreground uppercase">
             RECRU·AI
           </span>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         <nav className="flex-1 flex flex-col gap-0.5 px-3">

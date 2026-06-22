@@ -168,24 +168,39 @@ export default function InterviewPanel() {
             </button>
           </div>
 
-          <div className="space-y-2">
-            {round.suggestedQuestions.map((q, i) => (
-              <div key={i} className="bg-secondary/50 border border-border rounded-lg p-4 hover:border-muted-foreground/30 transition-all">
-                <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => setExpandedQ(expandedQ === i ? null : i)}>
-                  <div className="flex-1">
-                    <p className="text-[13px] leading-relaxed">{q.question}</p>
-                  </div>
-                  {expandedQ === i ? <ChevronUp size={14} className="text-muted-foreground mt-0.5" /> : <ChevronDown size={14} className="text-muted-foreground mt-0.5" />}
+          <div className="space-y-6">
+            {["easy", "medium", "hard"].map((difficulty) => {
+              const questions = round.suggestedQuestions.filter(q => q.difficulty === difficulty);
+              if (questions.length === 0) return null;
+              
+              return (
+                <div key={difficulty} className="space-y-2">
+                  <h3 className="text-[12px] font-medium uppercase tracking-wider text-muted-foreground ml-1">
+                    {difficulty} Questions
+                  </h3>
+                  {questions.map((q) => {
+                    const globalIndex = round.suggestedQuestions.indexOf(q);
+                    return (
+                      <div key={globalIndex} className="bg-secondary/50 border border-border rounded-lg p-4 hover:border-muted-foreground/30 transition-all">
+                        <div className="flex items-start justify-between gap-3 cursor-pointer" onClick={() => setExpandedQ(expandedQ === globalIndex ? null : globalIndex)}>
+                          <div className="flex-1">
+                            <p className="text-[13px] leading-relaxed">{q.question}</p>
+                          </div>
+                          {expandedQ === globalIndex ? <ChevronUp size={14} className="text-muted-foreground mt-0.5" /> : <ChevronDown size={14} className="text-muted-foreground mt-0.5" />}
+                        </div>
+                        {expandedQ === globalIndex && (
+                          <div className="mt-3 pt-3 border-t border-border flex items-center gap-3">
+                            <span className="text-[11px] bg-secondary px-2 py-0.5 rounded text-muted-foreground">{q.category}</span>
+                            <span className={`text-[11px] ${difficultyColor(q.difficulty)}`}>{q.difficulty}</span>
+                            <span className="text-[11px] text-muted-foreground/60">{q.intent}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                {expandedQ === i && (
-                  <div className="mt-3 pt-3 border-t border-border flex items-center gap-3">
-                    <span className="text-[11px] bg-secondary px-2 py-0.5 rounded text-muted-foreground">{q.category}</span>
-                    <span className={`text-[11px] ${difficultyColor(q.difficulty)}`}>{q.difficulty}</span>
-                    <span className="text-[11px] text-muted-foreground/60">{q.intent}</span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
 
             {round.suggestedQuestions.length === 0 && (
               <div className="text-center py-8 text-[13px] text-muted-foreground">
@@ -245,14 +260,19 @@ export default function InterviewPanel() {
                     <input type="checkbox" checked={recommendNext} onChange={(e) => setRecommendNext(e.target.checked)} className="rounded" />
                     <span className="text-[12px] text-muted-foreground">Recommend next round</span>
                   </label>
-                  <button
-                    onClick={handleSubmitFeedback}
-                    disabled={submitting || feedback.length < 10}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-foreground text-background rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
-                  >
-                    <Send size={14} />
-                    {submitting ? "Submitting..." : "Submit feedback"}
-                  </button>
+                  <div className="flex flex-col gap-1.5">
+                    <button
+                      onClick={handleSubmitFeedback}
+                      disabled={submitting || feedback.length < 10}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-foreground text-background rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
+                    >
+                      <Send size={14} />
+                      {submitting ? "Submitting..." : "Submit feedback"}
+                    </button>
+                    {feedback.length > 0 && feedback.length < 10 && (
+                      <span className="text-[11px] text-rose-500 text-center">Feedback must be at least 10 characters</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </>

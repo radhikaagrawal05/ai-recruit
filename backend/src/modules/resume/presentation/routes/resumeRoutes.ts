@@ -6,6 +6,7 @@ import { ParseResume } from "../../application/use-cases/ParseResume";
 import { EvaluateResume } from "../../application/use-cases/EvaluateResume";
 import { MongoCandidateRepository } from "../../../candidates/infrastructure/repositories/MongoCandidateRepository";
 import { MongoJobRepository } from "../../../jobs/infrastructure/repositories/MongoJobRepository";
+import { logger } from "../../../../infrastructure/logger";
 
 const router = Router();
 const candidateRepo = new MongoCandidateRepository();
@@ -65,11 +66,24 @@ router.post(
         return;
       }
 
+      logger.info(`Evaluating resume for candidate: ${candidate.name} (${req.params.candidateId})`);
+      logger.info(`Resume text length: ${candidate.resumeText?.length || 0} chars`);
+
+      if (!candidate.resumeText || candidate.resumeText.trim().length === 0) {
+        res.status(400).json({
+          success: false,
+          message: "Resume has not been parsed yet. Please re-upload the resume.",
+        });
+        return;
+      }
+
       const job = await jobRepo.findById(candidate.jobId);
       if (!job) {
         res.status(404).json({ success: false, message: "Job not found" });
         return;
       }
+
+      logger.info(`Job: ${job.title}, Skills: ${job.requiredSkills?.join(", ")}`);
 
       const evaluateResume = new EvaluateResume(candidateRepo);
       const evaluation = await evaluateResume.execute(
@@ -78,11 +92,14 @@ router.post(
         job.requiredSkills
       );
 
+      logger.info(`Evaluation complete — Grade: ${evaluation.grade}, Overall: ${evaluation.scores.overall}`);
       res.status(200).json({ success: true, data: evaluation });
     } catch (err: any) {
-      res.status(err.statusCode || 400).json({ success: false, message: err.message });
+      logger.error(`Resume evaluation failed for candidate ${req.params.candidateId}:`, err);
+      res.status(err.statusCode || 500).json({ success: false, message: err.message });
     }
   }
 );
 
 export default router;
+

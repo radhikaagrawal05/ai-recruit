@@ -7,6 +7,7 @@ import type { Candidate, InterviewRound } from "../types";
 import { ArrowLeft, Sparkles, Plus, Download, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import { API_BASE_URL } from "../lib/axios";
 
 const STATUSES = ["APPLIED", "SCREENING", "INTERVIEW", "OFFERED", "REJECTED", "HIRED"] as const;
 
@@ -19,6 +20,8 @@ export default function CandidateDetail() {
   const [loading, setLoading] = useState(true);
   const [evaluating, setEvaluating] = useState(false);
   const [scheduling, setScheduling] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
   const [showDelete, setShowDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -56,13 +59,15 @@ export default function CandidateDetail() {
   };
 
   const handleScheduleInterview = async () => {
-    if (!id || !candidate) return;
+    if (!id || !candidate || !scheduleDate) return;
     setScheduling(true);
     try {
-      await interviewService.create({ candidateId: id, jobId: candidate.jobId });
+      await interviewService.create({ candidateId: id, jobId: candidate.jobId, scheduledAt: scheduleDate });
       const res = await interviewService.getByCandidateId(id);
       if (res.data) setRounds(res.data);
       toast.success("Interview scheduled!");
+      setShowSchedule(false);
+      setScheduleDate("");
     } catch {
       toast.error("Failed to schedule interview");
     }
@@ -142,20 +147,18 @@ export default function CandidateDetail() {
             )}
 
             <div className="flex items-center gap-3 mt-4">
-              {!candidate.aiGrade && (
-                <button
-                  onClick={handleEvaluate}
-                  disabled={evaluating}
-                  className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
-                >
-                  <Sparkles size={14} />
-                  {evaluating ? "Evaluating..." : "AI Evaluate Resume"}
-                </button>
-              )}
+              <button
+                onClick={handleEvaluate}
+                disabled={evaluating}
+                className="flex items-center gap-2 px-4 py-2 bg-foreground text-background rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
+              >
+                <Sparkles size={14} />
+                {evaluating ? "Evaluating..." : candidate.aiGrade ? "Re-evaluate Resume" : "AI Evaluate Resume"}
+              </button>
 
               {candidate.resumeUrl && (
                 <a
-                  href={candidate.resumeUrl}
+                  href={candidate.resumeUrl.startsWith('http') ? candidate.resumeUrl : `${API_BASE_URL}${candidate.resumeUrl}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center gap-2 px-3 py-2 text-[12px] text-muted-foreground border border-border rounded-lg hover:border-muted-foreground/30 hover:text-foreground transition-all"
@@ -167,7 +170,7 @@ export default function CandidateDetail() {
           </div>
 
           {/* AI Scores */}
-          {candidate.aiScores && (
+          {candidate.aiGrade && candidate.aiScores && (
             <div className="bg-secondary/50 border border-border rounded-xl p-6">
               <h2 className="text-[14px] font-medium mb-4">AI Analysis</h2>
               <div className="grid grid-cols-2 gap-4">
@@ -246,7 +249,7 @@ export default function CandidateDetail() {
           {(user?.role === "HR" || user?.role === "RECRUITER") && (
             <div className="space-y-2">
               <button
-                onClick={handleScheduleInterview}
+                onClick={() => setShowSchedule(true)}
                 disabled={scheduling}
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-foreground text-background rounded-lg text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
               >
@@ -305,6 +308,56 @@ export default function CandidateDetail() {
           onConfirm={handleDelete}
           onCancel={() => setShowDelete(false)}
         />
+      )}
+
+      {/* Schedule Confirmation */}
+      {showSchedule && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm animate-fade-in">
+          <div className="bg-secondary border border-border rounded-xl shadow-xl w-full max-w-md p-6 animate-scale-in">
+            <h3 className="text-[15px] font-medium mb-2">Schedule Interview</h3>
+            <p className="text-[13px] text-muted-foreground mb-4">
+              Select a date and time for the interview. An invitation email will be sent to the candidate.
+            </p>
+            
+            <div className="space-y-4 mb-6">
+              <input 
+                type="datetime-local" 
+                value={scheduleDate}
+                onChange={(e) => setScheduleDate(e.target.value)}
+                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-[13px] outline-none"
+              />
+              
+              {scheduleDate && (
+                <div className="bg-background border border-border rounded-lg p-4 text-[12px] text-muted-foreground">
+                  <div className="font-medium text-foreground mb-2">Email Preview:</div>
+                  <p className="mb-2">Hi {candidate.name},</p>
+                  <p className="mb-2">Your Round {rounds.length + 1} interview has been scheduled.</p>
+                  <div className="bg-secondary rounded p-2 mb-2">
+                    <span className="block text-[10px] uppercase text-muted-foreground mb-1">Date & Time</span>
+                    <span className="text-foreground">{new Date(scheduleDate).toLocaleString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <p>Please be prepared and join on time. Good luck!</p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setShowSchedule(false)}
+                className="flex-1 px-4 py-2 text-[13px] border border-border rounded-lg hover:bg-background transition-all"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleScheduleInterview}
+                disabled={scheduling || !scheduleDate}
+                className="flex-1 px-4 py-2 text-[13px] bg-foreground text-background rounded-lg hover:opacity-90 disabled:opacity-50 transition-all"
+              >
+                {scheduling ? "Scheduling..." : "Schedule & Send Invite"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
